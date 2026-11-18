@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Secrets (commit .env.example files only)
+.env
+.env.*
+!.env.example
+
+# Next.js / Vite / TypeScript output
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# Expo / React Native
+.expo/
+.expo-shared/
+web-build/
+ios/
+android/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.keystore
+!debug.keystore
+
+# Tests and tooling
+coverage/
+.turbo/
+.vercel/
+.eslintcache
+
+# IDEs / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+npm-debug.log*

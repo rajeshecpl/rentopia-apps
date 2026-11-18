@@ -1,0 +1,25 @@
+# Production (main) only accepts pull requests from dev, or from hotfix/*
+# branches for urgent fixes. Make "branch-policy" a required check on main.
+name: branch-policy
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  check:
+    name: branch-policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Allow only dev or hotfix/* into main
+        env:
+          HEAD: ${{ github.head_ref }}
+        run: |
+          if [ "$HEAD" = "dev" ] || [[ "$HEAD" == hotfix/* ]]; then
+            echo "OK: $HEAD -> main"
+          else
+            echo "::error::Pull requests into main must come from 'dev' (or 'hotfix/*'). Got '$HEAD'. Merge into dev first."
+            exit 1
+          fi

@@ -1,0 +1,19 @@
+{
+  "name": "rentopia-apps",
+  "private": true,
+  "description": "RENTOPIA website, vendor/admin dashboards and mobile app (npm workspaces)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "api:types": "npm run gen -w @rentopia/api-client"
+  }
+}

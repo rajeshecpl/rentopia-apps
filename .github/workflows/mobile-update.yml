@@ -1,0 +1,77 @@
+# Publishes an over-the-air (JS-only) update of the customer app with EAS Update:
+#   push to dev  -> channel "preview"     (internal tester builds)
+#   push to main -> channel "production"  (store builds)
+# Native changes (new native modules, app.json native config) need a new
+# `eas build` instead; see docs/CI_CD.md.
+# Does nothing until apps/customer-app exists and EXPO_TOKEN is set.
+name: mobile-update
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - 'apps/customer-app/**'
+      - 'packages/**'
+      - 'package-lock.json'
+      - '.github/workflows/mobile-update.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-update-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    name: eas-update
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ github.ref_name == 'main' && 'production' || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check app and token
+        id: check
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ ! -f apps/customer-app/package.json ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "apps/customer-app does not exist yet; nothing to publish." >> "$GITHUB_STEP_SUMMARY"
+          elif [ -z "$EXPO_TOKEN" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "EXPO_TOKEN secret is not set in this environment; skipping EAS Update." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        if: steps.check.outputs.ready == 'true'
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+        if: steps.check.outputs.ready == 'true'
+
+      - name: Publish update
+        if: steps.check.outputs.ready == 'true'
+        working-directory: apps/customer-app
+        env:
+          CHANNEL: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+          # Passed via env, never inlined into the script: avoids shell injection from commit messages.
+          MESSAGE: ${{ github.event.head_commit.message || 'manual update' }}
+          EXPO_PUBLIC_API_URL: ${{ vars.API_URL }}
+        run: eas update --channel "$CHANNEL" --message "$MESSAGE" --non-interactive
